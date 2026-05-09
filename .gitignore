@@ -1,3 +1,7 @@
+# Added for CAD-Prompted SAM3
+outputs_eval_exemplar/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

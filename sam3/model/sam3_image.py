@@ -1,24 +1,27 @@
+from __future__ import annotations
+
 # Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved
 
 # pyre-unsafe
 
 import os
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import numpy as np
 import torch
 from sam3.model.model_misc import SAM3Output
-from sam3.model.sam1_task_predictor import SAM3InteractiveImagePredictor
 from sam3.model.vl_combiner import SAM3VLBackbone
 from sam3.perflib.nms import nms_masks
-from sam3.train.data.collator import BatchedDatapoint
 
 from .act_ckpt_utils import activation_ckpt_wrapper
 from .box_ops import box_cxcywh_to_xyxy
-from .data_misc import FindStage
+from .data_misc import BatchedDatapoint, FindStage
 from .geometry_encoders import Prompt
 from .model_misc import inverse_sigmoid
+
+if TYPE_CHECKING:
+    from sam3.model.sam1_task_predictor import SAM3InteractiveImagePredictor
 
 
 def _update_out(out, out_name, out_value, auxiliary=True, update_aux=True):

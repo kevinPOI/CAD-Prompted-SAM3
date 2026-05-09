@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 # Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved
 
 # pyre-unsafe
 
 import os
-from typing import Optional
+from importlib import resources
+from typing import Optional, TYPE_CHECKING
 
-import pkg_resources
 import torch
 import torch.nn as nn
 from huggingface_hub import hf_hub_download
@@ -37,17 +39,19 @@ from sam3.model.model_misc import (
 from sam3.model.multiplex_utils import MultiplexController
 from sam3.model.necks import Sam3DualViTDetNeck, Sam3TriViTDetNeck
 from sam3.model.position_encoding import PositionEmbeddingSine
-from sam3.model.sam1_task_predictor import SAM3InteractiveImagePredictor
 from sam3.model.sam3_image import Sam3Image, Sam3ImageOnVideoMultiGPU
-from sam3.model.sam3_tracking_predictor import Sam3TrackerPredictor
-from sam3.model.sam3_video_inference import Sam3VideoInferenceWithInstanceInteractivity
-from sam3.model.sam3_video_predictor import Sam3VideoPredictorMultiGPU
 from sam3.model.text_encoder_ve import VETextEncoder
 from sam3.model.tokenizer_ve import SimpleTokenizer
-from sam3.model.video_tracking_multiplex import VideoTrackingDynamicMultiplex
 from sam3.model.vitdet import ViT
 from sam3.model.vl_combiner import SAM3VLBackbone, SAM3VLBackboneTri, TriHeadVisionOnly
 from sam3.sam.transformer import RoPEAttention
+
+if TYPE_CHECKING:
+    from sam3.model.sam1_task_predictor import SAM3InteractiveImagePredictor
+    from sam3.model.sam3_tracking_predictor import Sam3TrackerPredictor
+    from sam3.model.sam3_video_inference import Sam3VideoInferenceWithInstanceInteractivity
+    from sam3.model.sam3_video_predictor import Sam3VideoPredictorMultiGPU
+    from sam3.model.video_tracking_multiplex import VideoTrackingDynamicMultiplex
 
 
 # Setup TensorFloat-32 for Ampere GPUs if available
@@ -61,6 +65,10 @@ def _setup_tf32() -> None:
 
 
 _setup_tf32()
+
+
+def _resource_filename(package: str, resource_name: str) -> str:
+    return str(resources.files(package).joinpath(resource_name))
 
 
 def _create_position_encoding(precompute_resolution=None):
@@ -451,6 +459,7 @@ def build_tracker(
     Returns:
         Sam3TrackerPredictor: Wrapped SAM3 Tracker module
     """
+    from sam3.model.sam3_tracking_predictor import Sam3TrackerPredictor
 
     # Create model components
     maskmem_backbone = _create_tracker_maskmem_backbone()
@@ -596,7 +605,7 @@ def build_sam3_image_model(
         A SAM3 image model
     """
     if bpe_path is None:
-        bpe_path = pkg_resources.resource_filename(
+        bpe_path = _resource_filename(
             "sam3", "assets/bpe_simple_vocab_16e6.txt.gz"
         )
 
@@ -628,6 +637,8 @@ def build_sam3_image_model(
     # Create geometry encoder
     input_geometry_encoder = _create_geometry_encoder()
     if enable_inst_interactivity:
+        from sam3.model.sam1_task_predictor import SAM3InteractiveImagePredictor
+
         sam3_pvs_base = build_tracker(apply_temporal_disambiguation=False)
         inst_predictor = SAM3InteractiveImagePredictor(sam3_pvs_base)
     else:
@@ -694,8 +705,10 @@ def build_sam3_video_model(
     Returns:
         Sam3VideoInferenceWithInstanceInteractivity: The instantiated dense tracking model
     """
+    from sam3.model.sam3_video_inference import Sam3VideoInferenceWithInstanceInteractivity
+
     if bpe_path is None:
-        bpe_path = pkg_resources.resource_filename(
+        bpe_path = _resource_filename(
             "sam3", "assets/bpe_simple_vocab_16e6.txt.gz"
         )
 
@@ -815,6 +828,8 @@ def build_sam3_video_model(
 
 
 def build_sam3_video_predictor(*model_args, gpus_to_use=None, **model_kwargs):
+    from sam3.model.sam3_video_predictor import Sam3VideoPredictorMultiGPU
+
     return Sam3VideoPredictorMultiGPU(
         *model_args, gpus_to_use=gpus_to_use, **model_kwargs
     )
@@ -1105,7 +1120,7 @@ def build_sam3_multiplex_video_predictor(
         Sam3MultiplexVideoPredictor: The fully-initialized predictor
     """
     if bpe_path is None:
-        bpe_path = pkg_resources.resource_filename(
+        bpe_path = _resource_filename(
             "sam3", "assets/bpe_simple_vocab_16e6.txt.gz"
         )
 
